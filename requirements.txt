@@ -1,0 +1,17 @@
+allure-python-commons
+faker
+webdriver-manager
+# Test Runner
+pytest==8.3.3
+
+# Selenium
+selenium==4.18.1
+
+# Reporting (Allure)
+allure-pytest==2.13.5
+
+# Parallel Execution
+pytest-xdist==3.6.1
+
+# Logging
+loguru==0.7.2
