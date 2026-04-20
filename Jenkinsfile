@@ -18,7 +18,7 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                sh '''
+                bat '''
                     if [ ! -d "${VENV_DIR}" ]; then
                         python3 -m venv ${VENV_DIR}
                     fi
@@ -31,7 +31,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh '''
+                bat '''
                     . ${VENV_DIR}/bin/activate
                     pytest tests/ \
                         --browser=chrome \
