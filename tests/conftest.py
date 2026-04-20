@@ -66,10 +66,14 @@ def global_test_setup(request):
 def driver(request):
     logger = get_logger()
 
+    is_jenkins = os.getenv("JENKINS_HOME") is not None
+
     browser_name = request.config.getoption("--browser")
     logger.info(f"Starting browser: {browser_name}")
+    logger.info(f"Running in Jenkins: {is_jenkins}")
 
-    driver = BrowserFactory.get_driver(browser_name)
+    # driver = BrowserFactory.get_driver(browser_name)
+    driver = BrowserFactory.get_driver(browser_name,headless=is_jenkins)
     driver.implicitly_wait(ConfigReader.get_implicit_wait())
     driver.set_page_load_timeout(60)
 
