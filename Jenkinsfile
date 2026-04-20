@@ -19,11 +19,11 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 bat '''
-                    if [ ! -d "${VENV_DIR}" ]; then
-                        python3 -m venv ${VENV_DIR}
-                    fi
-                    . ${VENV_DIR}/bin/activate
-                    pip install --upgrade pip
+                    if not exist "%VENV_DIR%" (
+                        python -m venv %VENV_DIR%
+                    )
+                    call %VENV_DIR%\\Scripts\\activate.bat
+                    python -m pip install --upgrade pip
                     pip install -r requirements.txt
                 '''
             }
@@ -32,12 +32,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat '''
-                    . ${VENV_DIR}/bin/activate
-                    pytest tests/ \
-                        --browser=chrome \
-                        --alluredir=reports/allure-results \
-                        -v \
-                        --tb=short
+                    call %VENV_DIR%\\Scripts\\activate.bat
+                    pytest tests/ --browser=chrome --alluredir=reports/allure-results -v --tb=short
                 '''
             }
         }
