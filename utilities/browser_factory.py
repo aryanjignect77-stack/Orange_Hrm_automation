@@ -9,38 +9,12 @@ from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-class BrowserFactory:
-    """Factory class for creating WebDriver instances for different browsers."""
-    
-    @staticmethod
-    # def get_driver(browser_name: str):
-    def get_driver(browser_name: str, headless: bool = False):
-        """
-        Create and return a WebDriver instance for the specified browser.
-        
-        Args:
-            browser_name (str): Name of the browser ('chrome', 'edge', 'firefox')
-            
-        Returns:
-            WebDriver: Configured WebDriver instance
-            
-        Raises:
-            ValueError: If unsupported browser name is provided
-        """
-        browser = browser_name.lower()
 
-        # if browser == "chrome":
-        #     options = ChromeOptions()
-        #     options.add_argument("--incognito")
-        #     options.add_argument("--start-maximized")
-        #     options.add_argument("--disable-notifications")
-        #     options.add_argument("--disable-infobars")
-        #
-        #     try:
-        #         service = ChromeService(ChromeDriverManager().install())
-        #     except Exception:
-        #         service = ChromeService()
-        #     driver = webdriver.Chrome(service=service, options=options)
+class BrowserFactory:
+
+    @staticmethod
+    def get_driver(browser_name: str, headless: bool = False):
+        browser = browser_name.lower()
 
         if browser == "chrome":
             options = ChromeOptions()
@@ -52,7 +26,9 @@ class BrowserFactory:
                 options.add_argument("--headless=new")
                 options.add_argument("--no-sandbox")
                 options.add_argument("--disable-dev-shm-usage")
-
+                options.add_argument("--disable-gpu")
+                options.add_argument("--window-size=1920,1080")  # ← Critical fix: menu invisible without this
+                options.add_argument("--remote-debugging-port=9222")
             else:
                 options.add_argument("--start-maximized")
 
@@ -63,25 +39,18 @@ class BrowserFactory:
 
             driver = webdriver.Chrome(service=service, options=options)
 
-        # elif browser == "edge":
-        #     options = EdgeOptions()
-        #     options.add_argument("--start-maximized")
-        #     options.add_argument("--disable-notifications")
-        #
-        #     service = EdgeService(EdgeChromiumDriverManager().install())
-        #     driver = webdriver.Edge(service=service, options=options)
-
         elif browser == "edge":
             options = EdgeOptions()
+            options.add_argument("--disable-notifications")
 
             if headless:
                 options.add_argument("--headless=new")
                 options.add_argument("--no-sandbox")
                 options.add_argument("--disable-dev-shm-usage")
+                options.add_argument("--disable-gpu")
+                options.add_argument("--window-size=1920,1080")  # ← Same fix for edge
             else:
                 options.add_argument("--start-maximized")
-
-            options.add_argument("--disable-notifications")
 
             service = EdgeService(EdgeChromiumDriverManager().install())
             driver = webdriver.Edge(service=service, options=options)
@@ -99,11 +68,5 @@ class BrowserFactory:
         return driver
 
 
-# def get_driver(browser_name: str):
-#     """
-#     Legacy function for backward compatibility.
-#     Use BrowserFactory.get_driver() instead.
-#     """
-#     return BrowserFactory.get_driver(browser_name)
 def get_driver(browser_name: str, headless: bool = False):
     return BrowserFactory.get_driver(browser_name, headless)

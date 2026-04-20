@@ -31,10 +31,12 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                bat '''
-                    call %VENV_DIR%\\Scripts\\activate.bat
-                    pytest tests/ --browser=chrome --alluredir=reports/allure-results -v --tb=short
-                '''
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    bat '''
+                        call %VENV_DIR%\\Scripts\\activate.bat
+                        pytest tests/ --browser=chrome --alluredir=reports/allure-results -v --tb=short
+                    '''
+                }
             }
         }
 

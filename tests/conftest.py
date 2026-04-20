@@ -23,9 +23,6 @@ ALLURE_RESULTS_DIR = "reports/allure-results"
 ALLURE_REPORT_DIR = "reports/allure-report"
 
 
-# =========================================================
-# Pytest CLI option
-# =========================================================
 def pytest_addoption(parser):
     parser.addoption(
         "--browser",
@@ -35,33 +32,20 @@ def pytest_addoption(parser):
     )
 
 
-# =========================================================
-# GLOBAL SETUP (runs ONCE, parallel-safe)
-# =========================================================
 @pytest.fixture(scope="session", autouse=True)
 def global_test_setup(request):
-    """
-    Cleans logs and allure results ONCE before test execution.
-    Safe for parallel and single test runs.
-    """
-    # If this is a worker process, skip cleanup
     if hasattr(request.config, "workerinput"):
         return
 
-    # Clean logs
     if os.path.exists(LOG_DIR):
         shutil.rmtree(LOG_DIR)
     os.makedirs(LOG_DIR, exist_ok=True)
 
-    # Clean allure results
     if os.path.exists(ALLURE_RESULTS_DIR):
         shutil.rmtree(ALLURE_RESULTS_DIR)
     os.makedirs(ALLURE_RESULTS_DIR, exist_ok=True)
 
 
-# =========================================================
-# WebDriver fixture (unchanged behavior)
-# =========================================================
 @pytest.fixture(scope="function")
 def driver(request):
     logger = get_logger()
@@ -72,9 +56,10 @@ def driver(request):
     logger.info(f"Starting browser: {browser_name}")
     logger.info(f"Running in Jenkins: {is_jenkins}")
 
-    # driver = BrowserFactory.get_driver(browser_name)
-    driver = BrowserFactory.get_driver(browser_name,headless=is_jenkins)
-    driver.implicitly_wait(ConfigReader.get_implicit_wait())
+    driver = BrowserFactory.get_driver(browser_name, headless=is_jenkins)
+
+    # ↓ Increased from default to handle slow CI environment
+    driver.implicitly_wait(30)
     driver.set_page_load_timeout(60)
 
     base_url = ConfigReader.get_base_url()
@@ -87,9 +72,6 @@ def driver(request):
     driver.quit()
 
 
-# =========================================================
-# Screenshot on failure (parallel-safe)
-# =========================================================
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
@@ -106,32 +88,18 @@ def pytest_runtest_makereport(item, call):
             )
 
 
-# =========================================================
-# Allure report generation (runs ONCE)
-# =========================================================
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
-    # Only master process should generate report
     if hasattr(session.config, "workerinput"):
         return
 
     if os.path.exists(ALLURE_RESULTS_DIR):
         subprocess.run(
-            [
-                "allure",
-                "generate",
-                ALLURE_RESULTS_DIR,
-                "-o",
-                ALLURE_REPORT_DIR,
-                "--clean"
-            ],
+            ["allure", "generate", ALLURE_RESULTS_DIR, "-o", ALLURE_REPORT_DIR, "--clean"],
             shell=True
         )
 
 
-# =========================================================
-# LOGIN FIXTURES (unchanged behavior)
-# =========================================================
 @pytest.fixture(scope="function")
 def user_logged_in(driver):
     login_data = LoginData.get_valid_user_details()
@@ -154,7 +122,6 @@ def create_employee_and_logout(driver):
     add_employee_page = AddEmployeePage(driver)
     common_page = CommonPage(driver)
 
-    # Login
     login_page.enter_login_details(
         login_data["username"],
         login_data["password"]
@@ -162,7 +129,6 @@ def create_employee_and_logout(driver):
 
     employee = AddEmployeeData.get_valid_add_employee_details()
 
-    # Create employee
     left_side_menubar.click_menu_by_name("PIM")
     pim_page.click_on_button_by_name("Add")
 
@@ -171,11 +137,8 @@ def create_employee_and_logout(driver):
     add_employee_page.fill_login_details(employee)
     add_employee_page.click_on_save_button()
 
-    # assert add_employee_page.is_success_toast_displayed()
     assert common_page.is_success_toast_message_displayed(), "Success toast message not displayed"
 
-
-    # Logout
     header_page.click_on_user_profile_dropdown_and_logout()
     return employee
 
@@ -192,7 +155,6 @@ def create_admin_system_user(driver, create_employee_and_logout):
     common_page = CommonPage(driver)
     pim_page = PimPage(driver)
 
-    # Login again
     login_page.enter_login_details(
         login_data["username"],
         login_data["password"]
