@@ -45,6 +45,7 @@ pipeline {
                 allure([
                     includeProperties: false,
                     jdk: '',
+                    commandline: 'allure',
                     results: [[path: 'reports/allure-results']],
                     reportBuildPolicy: 'ALWAYS',
                     report: 'allure-report'
@@ -54,36 +55,36 @@ pipeline {
     }
 
     post {
-    success {
-        echo 'All tests passed!'
-        mail to: 'aryanjignect77@gmail.com',
-             subject: "✅ PASSED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-             body: """
-Build Result: PASSED ✅
+        success {
+            echo 'All tests passed!'
+            mail to: 'aryanjignect77@gmail.com',
+                 subject: "PASSED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+                 body: """
+Build Result: PASSED
 
 Job: ${env.JOB_NAME}
 Build Number: #${env.BUILD_NUMBER}
 Build URL: ${env.BUILD_URL}
 
-📊 Allure Report: ${env.BUILD_URL}allure
-             """
-    }
-    failure {
-        mail to: 'aryanjignect77@gmail.com',
-             subject: "❌ FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-             body: """
-Build Result: FAILED ❌
+Allure Report: ${env.BUILD_URL}allure
+                 """
+        }
+        failure {
+            mail to: 'aryanjignect77@gmail.com',
+                 subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+                 body: """
+Build Result: FAILED
 
 Job: ${env.JOB_NAME}
 Build Number: #${env.BUILD_NUMBER}
 Build URL: ${env.BUILD_URL}
 
-📊 Allure Report: ${env.BUILD_URL}allure
+Allure Report: ${env.BUILD_URL}allure
 Console Log: ${env.BUILD_URL}console
-             """
-    }
-    always {
-        cleanWs()
-    }
+                 """
+        }
+        always {
+            cleanWs()
+        }
     }
 }
