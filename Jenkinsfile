@@ -6,7 +6,8 @@ pipeline {
     }
 
     triggers {
-        cron('H 6 * * *')
+        cron('H 3 * * *')
+        pollSCM('H/5 * * * *')
     }
 
     stages {
