@@ -2,76 +2,68 @@ name: Run Selenium Tests
 
 on:
   schedule:
-    - cron: '30 2 * * *'   # Daily (UTC)
+    - cron: '30 2 * * *'
   workflow_dispatch:
   push:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Install Chrome
-      uses: browser-actions/setup-chrome@v1
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y default-jre wget
+          wget -q https://github.com/allure-framework/allure2/releases/download/2.29.0/allure-2.29.0.tgz
+          tar -zxf allure-2.29.0.tgz
+          sudo mv allure-2.29.0 /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/bin/allure
+          allure --version
 
-    # Debug: verify files
-    - name: Debug project structure
-      run: |
-        echo "Listing project files"
-        ls -R
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
 
-    - name: Run Selenium tests with Allure
-      run: |
-        pytest -v --alluredir=allure-results || true
+      - name: Debug project structure
+        run: ls -R
 
-    # Debug: check results generated
-    - name: Debug allure results
-      run: |
-        echo "Checking allure-results folder"
-        ls -R allure-results || echo "No allure-results found"
+      - name: Run Selenium tests
+        env:
 
-    # Install Allure CLI
-    - name: Install Allure
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y default-jre wget unzip
-        wget https://github.com/allure-framework/allure2/releases/download/2.29.0/allure-2.29.0.tgz
-        tar -zxvf allure-2.29.0.tgz
-        sudo mv allure-2.29.0 /opt/allure
-        sudo ln -s /opt/allure/bin/allure /usr/bin/allure
-        allure --version
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest -v --alluredir=reports/allure-results || true
 
-    # Generate report (safe mode)
-    - name: Generate Allure Report
-      run: |
-        if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
-          allure generate allure-results --clean -o allure-report
-        else
-          echo "No results found, skipping report generation"
-          mkdir allure-report
-          echo "<h1>No test results found</h1>" > allure-report/index.html
-        fi
+      - name: Debug allure results
+        run: |
+          echo "=== allure-results ==="
+          ls -R reports/allure-results || echo "No allure-results found"
 
-    # Upload report always
-    - name: Upload Allure Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-report
-        path: allure-report
-        if-no-files-found: warn
+      - name: Generate Allure Report
+        run: |
+          if [ -d "reports/allure-results" ] && [ "$(ls -A reports/allure-results)" ]; then
+            allure generate reports/allure-results --clean -o reports/allure-report
+          else
+            echo "No results found, skipping report generation"
+            mkdir -p reports/allure-report
+            echo "<h1>No test results found</h1>" > reports/allure-report/index.html
+          fi
+
+      - name: Upload Allure Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: reports/allure-report
+          if-no-files-found: warn

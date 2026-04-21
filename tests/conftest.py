@@ -19,6 +19,7 @@ from utilities.config_reader import ConfigReader
 from utilities.logger import get_logger
 
 LOG_DIR = "logs"
+# Single source of truth — must match --alluredir in pytest CLI / CI command
 ALLURE_RESULTS_DIR = "reports/allure-results"
 ALLURE_REPORT_DIR = "reports/allure-report"
 
@@ -34,6 +35,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session", autouse=True)
 def global_test_setup(request):
+    # Skip on xdist worker nodes — only the controller should do cleanup
     if hasattr(request.config, "workerinput"):
         return
 
@@ -50,15 +52,15 @@ def global_test_setup(request):
 def driver(request):
     logger = get_logger()
 
-    is_jenkins = os.getenv("JENKINS_HOME") is not None
+    # Detect both Jenkins and GitHub Actions headless environments
+    is_ci = os.getenv("JENKINS_HOME") is not None or os.getenv("CI") is not None
 
     browser_name = request.config.getoption("--browser")
     logger.info(f"Starting browser: {browser_name}")
-    logger.info(f"Running in Jenkins: {is_jenkins}")
+    logger.info(f"Running in CI/headless mode: {is_ci}")
 
-    driver = BrowserFactory.get_driver(browser_name, headless=is_jenkins)
+    driver = BrowserFactory.get_driver(browser_name, headless=is_ci)
 
-    # ↓ Increased from default to handle slow CI environment
     driver.implicitly_wait(30)
     driver.set_page_load_timeout(60)
 
@@ -90,14 +92,21 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
+    # Skip on xdist worker nodes
     if hasattr(session.config, "workerinput"):
         return
 
     if os.path.exists(ALLURE_RESULTS_DIR):
-        subprocess.run(
-            ["allure", "generate", ALLURE_RESULTS_DIR, "-o", ALLURE_REPORT_DIR, "--clean"],
-            shell=True
+        # FIX: shell=True + list only passes the first element to the shell on Linux.
+        # Use a plain string so the shell receives the full command correctly.
+        cmd = (
+            f"allure generate {ALLURE_RESULTS_DIR} "
+            f"-o {ALLURE_REPORT_DIR} --clean"
         )
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            print(f"[WARN] Allure report generation failed (exit {result.returncode}). "
+                  "Is 'allure' installed and on PATH?")
 
 
 @pytest.fixture(scope="function")
